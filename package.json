@@ -1,0 +1,26 @@
+{
+  "name": "pizarra-interactiva",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Pizarra colaborativa en tiempo real con notas adhesivas (monorepo).",
+  "type": "module",
+  "workspaces": [
+    "shared",
+    "server",
+    "client"
+  ],
+  "engines": {
+    "node": ">=20.12"
+  },
+  "scripts": {
+    "dev": "concurrently --kill-others-on-fail --names server,client --prefix-colors blue,magenta \"npm run dev -w server\" \"npm run dev -w client\"",
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "build": "npm run typecheck && npm run build -w client",
+    "test": "npm test --workspaces --if-present",
+    "start": "npm start -w server"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.5",
+    "typescript": "^7.0.2"
+  }
+}

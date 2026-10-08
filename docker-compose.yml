@@ -1,0 +1,23 @@
+# PostgreSQL para desarrollo local:  docker compose up -d
+# Usa el puerto 5434 del host (5432 y 5433 suelen estar ocupados por otras instancias).
+# Para cambiarlo: PIZARRA_DB_PORT=5440 docker compose up -d  (y ajusta DATABASE_URL).
+# DATABASE_URL=postgres://pizarra:pizarra@localhost:5434/pizarra
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: pizarra
+      POSTGRES_PASSWORD: pizarra
+      POSTGRES_DB: pizarra
+    ports:
+      - '${PIZARRA_DB_PORT:-5434}:5432'
+    volumes:
+      - pizarra-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U pizarra -d pizarra']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  pizarra-data:

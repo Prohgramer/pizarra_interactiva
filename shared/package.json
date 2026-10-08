@@ -1,0 +1,17 @@
+{
+  "name": "@pizarra/shared",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Protocolo de mensajes y constantes compartidas entre cliente y servidor.",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "lib0": "^0.2.117",
+    "yjs": "^13.6.32"
+  }
+}

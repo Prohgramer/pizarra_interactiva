@@ -1,0 +1,1861 @@
+/* ───────────── Tokens ───────────── */
+
+:root {
+  color-scheme: light;
+
+  --bg: #e4e9f0;
+  --bg-dot: rgb(71 89 118 / 0.28);
+  --ink: #141d2b;
+  --ink-soft: #52607a;
+  --surface: rgb(255 255 255 / 0.86);
+  --surface-solid: #ffffff;
+  --line: rgb(20 29 43 / 0.1);
+
+  /* Azul cobalto: acento de toda la interfaz. */
+  --accent: #1f47c7;
+  --accent-strong: #15369c;
+  --accent-glow: rgb(31 71 199 / 0.55);
+
+  --live: #188a52;
+  --connecting: #c98a12;
+  --offline: #c98a12;
+
+  --font-ui: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
+  --font-note: 'Patrick Hand', 'Segoe Print', 'Comic Sans MS', cursive;
+
+  --paper-yellow: #ffe27a;
+  --paper-pink: #ffc3d4;
+  --paper-green: #c6ebb1;
+  --paper-blue: #bfe0f7;
+  --paper-lilac: #ddcefb;
+  --paper-ink: #2b2414;
+
+  /* En reposo la nota está "pegada"; al tomarla se despega y la sombra se abre. */
+  --shadow-rest: 0 1px 1px rgb(20 32 52 / 0.1), 0 2px 5px -1px rgb(20 32 52 / 0.16),
+    0 12px 16px -12px rgb(20 32 52 / 0.35);
+  --shadow-lift: 0 3px 6px rgb(20 32 52 / 0.1), 0 20px 30px -10px rgb(20 32 52 / 0.36),
+    0 40px 64px -24px rgb(20 32 52 / 0.42);
+  --shadow-float: 0 1px 2px rgb(20 32 52 / 0.06), 0 10px 28px -12px rgb(20 32 52 / 0.32);
+
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --safe-top: max(12px, env(safe-area-inset-top));
+}
+
+/* ───────────── Base ───────────── */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font-ui);
+  font-size: 15px;
+  -webkit-font-smoothing: antialiased;
+  -webkit-tap-highlight-color: transparent;
+}
+
+p {
+  margin: 0;
+}
+
+button {
+  font: inherit;
+  color: inherit;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ───────────── Tablero ───────────── */
+
+.viewport {
+  position: fixed;
+  inset: 0;
+  overflow: auto;
+  overscroll-behavior: none;
+}
+
+.board {
+  position: relative;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--bg-dot) 1.3px, transparent 1.8px);
+  background-size: 24px 24px;
+  background-position: 12px 12px;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+/* ───────────── Notas ───────────── */
+
+/* Aspecto de papel, compartido por las notas reales y las decorativas. */
+.note,
+.decor-note,
+.lost-note {
+  --paper: var(--paper-yellow);
+
+  background:
+    radial-gradient(circle at 100% 100%, rgb(60 40 0 / 0.08), transparent 38px),
+    linear-gradient(172deg, color-mix(in oklab, var(--paper), white 32%) 0%, var(--paper) 24%,
+      color-mix(in oklab, var(--paper), #5c4300 7%) 100%);
+  border-radius: 2px 2px 5px 3px;
+  box-shadow: var(--shadow-rest);
+}
+
+.note {
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  flex-direction: column;
+  width: var(--note-width);
+  height: var(--note-height);
+  rotate: var(--note-rotation, 0deg);
+  transform-origin: 50% 14%;
+  /* La transición de `translate` suaviza los saltos de los movimientos remotos
+     (llegan cada ~50 ms). Quien arrastra la desactiva con .is-dragging. */
+  transition:
+    translate 80ms linear,
+    rotate 240ms var(--ease-out),
+    scale 240ms var(--ease-out),
+    box-shadow 240ms var(--ease-out);
+  animation: note-in 260ms var(--ease-out);
+}
+
+.note--yellow {
+  --paper: var(--paper-yellow);
+}
+.note--pink {
+  --paper: var(--paper-pink);
+}
+.note--green {
+  --paper: var(--paper-green);
+}
+.note--blue {
+  --paper: var(--paper-blue);
+}
+.note--lilac {
+  --paper: var(--paper-lilac);
+}
+
+/* Al tomarla: se endereza, crece un poco y se despega del tablero. */
+.note.is-dragging {
+  z-index: 20;
+  rotate: 0deg;
+  scale: 1.045;
+  box-shadow: var(--shadow-lift);
+  transition:
+    rotate 180ms var(--ease-out),
+    scale 180ms var(--ease-out),
+    box-shadow 180ms var(--ease-out);
+}
+
+.note:focus-within {
+  z-index: 10;
+}
+
+.note:has(.note__text:focus-visible) {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+@keyframes note-in {
+  from {
+    opacity: 0;
+    scale: 0.9;
+  }
+}
+
+.note__bar {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  padding: 0 4px 0 2px;
+  background: rgb(60 40 0 / 0.05);
+  border-radius: 2px 2px 0 0;
+  cursor: grab;
+  touch-action: none;
+}
+
+.note.is-dragging .note__bar {
+  cursor: grabbing;
+}
+
+.note__handle,
+.note__action {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+}
+
+.note__handle {
+  color: rgb(43 36 20 / 0.42);
+  cursor: inherit;
+}
+
+.note__handle:disabled {
+  cursor: default;
+}
+
+.note__actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 150ms ease;
+}
+
+.note:hover .note__actions,
+.note:focus-within .note__actions {
+  opacity: 1;
+}
+
+.note__action {
+  color: rgb(43 36 20 / 0.62);
+  cursor: pointer;
+  transition:
+    background-color 120ms ease,
+    color 120ms ease;
+}
+
+.note__action:hover:not(:disabled),
+.note__action[aria-expanded='true'] {
+  background: rgb(43 36 20 / 0.09);
+  color: var(--paper-ink);
+}
+
+.note__action--danger:hover:not(:disabled) {
+  background: rgb(179 38 30 / 0.12);
+  color: #a3241c;
+}
+
+.note__action:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.note__palette {
+  position: absolute;
+  top: 36px;
+  right: 6px;
+  z-index: 1;
+  display: flex;
+  gap: 6px;
+  padding: 6px;
+  background: var(--surface-solid);
+  border-radius: 999px;
+  box-shadow:
+    0 0 0 1px var(--line),
+    0 8px 20px -8px rgb(20 32 52 / 0.4);
+  animation: pop-in 160ms var(--ease-out);
+}
+
+@keyframes pop-in {
+  from {
+    opacity: 0;
+    translate: 0 -4px;
+  }
+}
+
+.swatch {
+  --swatch: var(--paper-yellow);
+
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--swatch);
+  box-shadow: inset 0 0 0 1px rgb(0 0 0 / 0.14);
+  cursor: pointer;
+  transition: scale 120ms var(--ease-out);
+}
+
+.swatch:hover {
+  scale: 1.12;
+}
+
+.swatch[aria-pressed='true'] {
+  box-shadow:
+    inset 0 0 0 1px rgb(0 0 0 / 0.14),
+    0 0 0 2px var(--surface-solid),
+    0 0 0 4px var(--ink-soft);
+}
+
+.swatch--pink {
+  --swatch: var(--paper-pink);
+}
+.swatch--green {
+  --swatch: var(--paper-green);
+}
+.swatch--blue {
+  --swatch: var(--paper-blue);
+}
+.swatch--lilac {
+  --swatch: var(--paper-lilac);
+}
+
+.note__text {
+  flex: 1;
+  width: 100%;
+  min-height: 0;
+  margin: 0;
+  padding: 6px 14px 14px;
+  overflow-y: auto;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--paper-ink);
+  font-family: var(--font-note);
+  font-size: 21px;
+  line-height: 1.22;
+  resize: none;
+  scrollbar-width: thin;
+  user-select: text;
+  -webkit-user-select: text;
+}
+
+.note__text::placeholder {
+  color: rgb(43 36 20 / 0.36);
+}
+
+.note__text:read-only {
+  cursor: default;
+}
+
+/* ───────────── Barra superior ───────────── */
+
+.toolbar {
+  position: fixed;
+  top: var(--safe-top);
+  left: 50%;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  max-width: calc(100vw - 24px);
+  padding: 6px;
+  translate: -50% 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  white-space: nowrap;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 9px;
+  color: inherit;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.brand:hover {
+  background: rgb(20 29 43 / 0.05);
+}
+
+/* Mini nota con la franja superior en cobalto. */
+.brand__mark {
+  width: 17px;
+  height: 17px;
+  border-radius: 2px;
+  background: linear-gradient(var(--accent) 0 5px, var(--paper-yellow) 5px);
+  box-shadow: 0 1px 2px rgb(20 32 52 / 0.25);
+  rotate: -7deg;
+}
+
+.toolbar__divider {
+  width: 1px;
+  height: 22px;
+  margin: 0 4px;
+  background: var(--line);
+}
+
+.status {
+  --dot: var(--connecting);
+
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 30px;
+  padding: 0 11px 0 10px;
+  border-radius: 999px;
+  background: rgb(20 29 43 / 0.05);
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.status__dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--dot);
+}
+
+.status--connecting .status__dot {
+  animation: blink 900ms ease-in-out infinite alternate;
+}
+
+.status--live {
+  --dot: var(--live);
+
+  background: rgb(24 138 82 / 0.1);
+  color: #0f6139;
+}
+
+.status--live .status__dot {
+  animation: pulse 2.2s ease-out infinite;
+}
+
+.status--offline {
+  --dot: var(--offline);
+
+  background: rgb(201 138 18 / 0.13);
+  color: #7a4f05;
+}
+
+@keyframes blink {
+  to {
+    opacity: 0.3;
+  }
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 0 0 0 rgb(24 138 82 / 0.45);
+  }
+  70%,
+  100% {
+    box-shadow: 0 0 0 7px rgb(24 138 82 / 0);
+  }
+}
+
+/* ───────────── Presencia: avatares ───────────── */
+
+.people {
+  display: flex;
+  align-items: center;
+  padding: 0 4px;
+}
+
+.avatar {
+  --peer: var(--ink-soft);
+
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--peer);
+  box-shadow: 0 0 0 2px var(--surface-solid);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  user-select: none;
+}
+
+.avatar + .avatar {
+  margin-left: -6px;
+}
+
+.avatar--self {
+  cursor: pointer;
+  transition:
+    translate 150ms var(--ease-out),
+    box-shadow 150ms ease;
+}
+
+.avatar--self:hover {
+  translate: 0 -1px;
+}
+
+.avatar--self[aria-expanded='true'] {
+  box-shadow:
+    0 0 0 2px var(--surface-solid),
+    0 0 0 4px var(--peer);
+}
+
+.avatar--more {
+  background: #e3e7ee;
+  color: var(--ink-soft);
+}
+
+/* Se posiciona respecto de la barra (que es fixed), centrado debajo de ella. */
+.name-editor {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  width: min(320px, calc(100vw - 32px));
+  padding: 14px;
+  translate: -50% 0;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px -16px rgb(20 32 52 / 0.42);
+  white-space: normal;
+  animation: pop-in 160ms var(--ease-out);
+}
+
+.name-editor__label {
+  display: block;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.name-editor__row {
+  display: flex;
+  gap: 8px;
+}
+
+.name-editor__input {
+  flex: 1;
+  min-width: 0;
+  height: 36px;
+  padding: 0 10px;
+  background: #fff;
+  border: 1px solid rgb(20 29 43 / 0.2);
+  border-radius: 8px;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.name-editor__input:focus-visible {
+  border-color: transparent;
+  outline-offset: 0;
+}
+
+.name-editor .button {
+  height: 36px;
+  padding: 0 14px;
+}
+
+.name-editor__hint {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 12.5px;
+}
+
+/* ───────────── Presencia: cursores ───────────── */
+
+.cursors {
+  position: absolute;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.cursor {
+  --peer: var(--accent);
+
+  position: absolute;
+  top: 0;
+  left: 0;
+  /* Suaviza los saltos entre posiciones (llegan cada ~50 ms). */
+  transition: translate 90ms linear;
+}
+
+.cursor__arrow {
+  display: block;
+  fill: var(--peer);
+  stroke: #fff;
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+  filter: drop-shadow(0 1px 2px rgb(20 32 52 / 0.35));
+}
+
+.cursor__label {
+  position: absolute;
+  top: 17px;
+  left: 12px;
+  max-width: 180px;
+  overflow: hidden;
+  padding: 2px 8px 3px;
+  background: var(--peer);
+  border-radius: 4px 10px 10px;
+  box-shadow: 0 2px 6px -1px rgb(20 32 52 / 0.35);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ───────────── Presencia: nota que otra persona edita ───────────── */
+
+/* Si yo también la estoy editando, gana mi foco (en azul cobalto). */
+.note.is-remote-editing:not(:focus-within) {
+  outline: 2px solid var(--editor);
+  outline-offset: 3px;
+}
+
+.note__editor {
+  position: absolute;
+  bottom: 100%;
+  left: -3px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  max-width: calc(100% + 6px);
+  margin-bottom: 7px;
+  overflow: hidden;
+  padding: 2px 8px 3px 6px;
+  background: var(--editor);
+  border-radius: 6px;
+  box-shadow: 0 2px 6px -1px rgb(20 32 52 / 0.3);
+  color: #fff;
+  font-family: var(--font-ui);
+  font-size: 12px;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  pointer-events: none;
+}
+
+.note__editor svg {
+  flex: none;
+}
+
+.note__editor-more {
+  font-weight: 500;
+  opacity: 0.85;
+}
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 14px 0 11px;
+  border: 0;
+  border-radius: 9px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    translate 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.button--primary {
+  background: var(--accent);
+  color: #fff;
+  box-shadow:
+    inset 0 1px 0 rgb(255 255 255 / 0.18),
+    0 6px 14px -6px var(--accent-glow);
+}
+
+.button--primary:hover:not(:disabled) {
+  background: var(--accent-strong);
+}
+
+.button--primary:active:not(:disabled) {
+  translate: 0 1px;
+}
+
+.button:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+
+.button--ghost {
+  background: transparent;
+  color: var(--ink);
+}
+
+.button--ghost:hover:not(:disabled) {
+  background: rgb(20 29 43 / 0.06);
+}
+
+/* Solo ícono (deshacer, rehacer): cuadrado, sin etiqueta. */
+.button--icon {
+  padding: 0 8px;
+}
+
+.button--large {
+  height: 46px;
+  padding: 0 20px 0 16px;
+  border-radius: 11px;
+  font-size: 16px;
+}
+
+a.button {
+  text-decoration: none;
+}
+
+/* ───────────── Portada y enlace no válido ───────────── */
+
+.home {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow-y: auto;
+  padding: clamp(56px, 13vh, 132px) 16px 48px;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--bg-dot) 1.3px, transparent 1.8px);
+  background-size: 24px 24px;
+  background-position: 12px 12px;
+}
+
+.home--centered {
+  justify-content: center;
+}
+
+.home__hero {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  max-width: 580px;
+  text-align: center;
+}
+
+.home__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  padding: 6px 14px 6px 12px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  box-shadow: var(--shadow-float);
+  font-weight: 600;
+}
+
+.home__title {
+  margin: 0;
+  font-size: clamp(30px, 5.4vw, 46px);
+  font-weight: 600;
+  line-height: 1.08;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+.home__lead {
+  max-width: 470px;
+  color: var(--ink-soft);
+  font-size: 17px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.home__lead code {
+  padding: 1px 5px;
+  background: rgb(20 29 43 / 0.07);
+  border-radius: 5px;
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 0.88em;
+}
+
+.home__hero > .button--large {
+  margin-top: 6px;
+}
+
+.home__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.home__decor {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.decor-note {
+  position: absolute;
+  width: 150px;
+  height: 150px;
+  padding: 38px 16px 16px;
+  background-color: var(--paper);
+  color: var(--paper-ink);
+  font-family: var(--font-note);
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+/* La franja superior, como en las notas reales. */
+.decor-note::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto;
+  height: 26px;
+  background: rgb(60 40 0 / 0.05);
+}
+
+.decor--a {
+  top: 11%;
+  left: max(24px, 7%);
+}
+.decor--b {
+  top: 16%;
+  right: max(24px, 8%);
+}
+.decor--c {
+  bottom: 12%;
+  left: max(40px, 12%);
+}
+.decor--d {
+  bottom: 9%;
+  right: max(40px, 11%);
+}
+
+.lost-note {
+  display: grid;
+  place-items: center;
+  width: 108px;
+  height: 108px;
+  margin-bottom: 8px;
+  color: var(--paper-ink);
+  font-family: var(--font-note);
+  font-size: 60px;
+  rotate: -6deg;
+}
+
+.recent {
+  position: relative;
+  z-index: 1;
+  width: min(470px, 100%);
+  margin-top: 56px;
+}
+
+.recent__title {
+  margin: 0 0 10px 6px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.recent__list {
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.recent__item {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.recent__link {
+  display: flex;
+  flex: 1;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+  padding: 10px 10px 10px 12px;
+  border-radius: 9px;
+  color: inherit;
+  text-decoration: none;
+  transition: background-color 150ms ease;
+}
+
+.recent__link:hover {
+  background: rgb(20 29 43 / 0.05);
+}
+
+.recent__mark {
+  flex: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 2px;
+  background: linear-gradient(rgb(60 40 0 / 0.08) 0 5px, var(--mark, var(--paper-yellow)) 5px);
+  background-color: var(--mark, var(--paper-yellow));
+  box-shadow: 0 1px 2px rgb(20 32 52 / 0.22);
+  rotate: -6deg;
+}
+
+.recent__item:nth-child(5n + 2) .recent__mark {
+  --mark: var(--paper-pink);
+  rotate: 4deg;
+}
+.recent__item:nth-child(5n + 3) .recent__mark {
+  --mark: var(--paper-green);
+  rotate: -2deg;
+}
+.recent__item:nth-child(5n + 4) .recent__mark {
+  --mark: var(--paper-blue);
+  rotate: 5deg;
+}
+.recent__item:nth-child(5n + 5) .recent__mark {
+  --mark: var(--paper-lilac);
+  rotate: -4deg;
+}
+
+/* Monoespaciada: en la fuente de la interfaz, «l» e «I» se confunden. */
+.recent__code {
+  font-family: ui-monospace, 'Cascadia Code', Consolas, monospace;
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.recent__time {
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.recent__arrow {
+  flex: none;
+  color: var(--ink-soft);
+  transition:
+    translate 150ms ease,
+    color 150ms ease;
+}
+
+.recent__link:hover .recent__arrow {
+  translate: 2px 0;
+  color: var(--accent);
+}
+
+.recent__forget {
+  display: grid;
+  flex: none;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  opacity: 0.55;
+  transition:
+    opacity 150ms ease,
+    background-color 150ms ease;
+}
+
+.recent__forget:hover,
+.recent__forget:focus-visible {
+  background: rgb(20 29 43 / 0.06);
+  opacity: 1;
+}
+
+.recent__hint {
+  margin: 10px 6px 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+/* ───────────── Avisos ───────────── */
+
+.banner {
+  position: fixed;
+  top: calc(var(--safe-top) + 58px);
+  left: 50%;
+  z-index: 90;
+  width: max-content;
+  max-width: calc(100vw - 32px);
+  padding: 8px 14px;
+  translate: -50% 0;
+  /* Ámbar y no rojo: sin conexión se sigue trabajando, no es un error. */
+  background: #fff8ec;
+  border: 1px solid rgb(201 138 18 / 0.3);
+  border-radius: 10px;
+  box-shadow: var(--shadow-float);
+  color: #6f4a06;
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+/* Solo lectura no es un problema: se anuncia en el azul de la interfaz. */
+.banner--info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #eef2fd;
+  border-color: rgb(31 71 199 / 0.25);
+  color: #1b2d63;
+  text-align: left;
+}
+
+.banner--info svg {
+  flex: none;
+}
+
+/* Vive dentro del tablero, en su centro: debajo de los cursores y sin tapar nada. */
+.empty-hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(340px, calc(100vw - 32px));
+  translate: -50% -50%;
+  padding: 18px 22px 20px;
+  pointer-events: none;
+  background: rgb(255 255 255 / 0.5);
+  border: 1.5px dashed rgb(71 89 118 / 0.38);
+  border-radius: 14px;
+  color: var(--ink-soft);
+  line-height: 1.5;
+  text-align: center;
+}
+
+.empty-hint__title {
+  margin-bottom: 4px;
+  color: var(--ink);
+  font-family: var(--font-note);
+  font-size: 26px;
+}
+
+.toast-region {
+  position: fixed;
+  bottom: max(16px, env(safe-area-inset-bottom));
+  left: 50%;
+  z-index: 110;
+  translate: -50% 0;
+  pointer-events: none;
+}
+
+.toast {
+  max-width: calc(100vw - 32px);
+  padding: 10px 16px;
+  background: var(--ink);
+  border-radius: 10px;
+  box-shadow: 0 12px 28px -10px rgb(20 32 52 / 0.5);
+  color: #fff;
+  font-size: 14px;
+  animation: toast-in 220ms var(--ease-out);
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    translate: 0 8px;
+  }
+}
+
+/* ───────────── Cuentas, permisos y compartir ───────────── */
+
+/* Barra de la portada: solo la cuenta, arriba a la derecha. */
+.home__bar {
+  position: absolute;
+  top: var(--safe-top);
+  right: 16px;
+  z-index: 2;
+  display: flex;
+  gap: 6px;
+  padding: 5px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-float);
+  backdrop-filter: blur(14px) saturate(1.5);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+}
+
+.home__note {
+  max-width: 470px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.home__note a {
+  color: var(--accent);
+}
+
+/* Menú de la cuenta (en la barra del tablero y en la portada). */
+.account {
+  position: relative;
+}
+
+.account__menu {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  z-index: 10;
+  width: max-content;
+  min-width: 190px;
+  max-width: min(280px, calc(100vw - 32px));
+  padding: 12px;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: 0 16px 40px -16px rgb(20 32 52 / 0.42);
+  white-space: normal;
+  animation: pop-in 160ms var(--ease-out);
+}
+
+.account__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.account__email {
+  margin-top: 2px;
+  overflow-wrap: anywhere;
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.account__action {
+  width: 100%;
+  margin-top: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.account__action:hover {
+  background: rgb(20 29 43 / 0.06);
+}
+
+/* Etiquetas de rol y visibilidad en la lista de tableros. */
+.recent__badges {
+  display: flex;
+  gap: 6px;
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background: rgb(20 29 43 / 0.06);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+/* ───────────── Entrar y crear cuenta ───────────── */
+
+.auth {
+  gap: 14px;
+  width: min(420px, 100%);
+}
+
+.auth__brand {
+  color: inherit;
+  text-decoration: none;
+}
+
+.auth__title {
+  margin: 4px 0 0;
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.auth__lead {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+.auth__tabs {
+  display: flex;
+  gap: 4px;
+  width: 100%;
+  padding: 4px;
+  background: rgb(20 29 43 / 0.06);
+  border-radius: 11px;
+}
+
+.auth__tab {
+  flex: 1;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.auth__tab.is-active {
+  background: var(--surface-solid);
+  box-shadow: 0 1px 3px rgb(20 32 52 / 0.16);
+}
+
+.auth__form {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+  padding: 18px;
+  background: var(--surface-solid);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  box-shadow: var(--shadow-float);
+  text-align: left;
+}
+
+.auth__label {
+  margin-top: 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.auth__input {
+  height: 40px;
+  padding: 0 12px;
+  border: 1px solid rgb(20 29 43 / 0.2);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+}
+
+.auth__input:focus-visible {
+  border-color: transparent;
+  outline-offset: 0;
+}
+
+.auth__hint,
+.auth__foot {
+  color: var(--ink-soft);
+  font-size: 13px;
+}
+
+.auth__foot a {
+  color: var(--accent);
+}
+
+.auth__error {
+  padding: 8px 10px;
+  background: #fdeeee;
+  border: 1px solid rgb(163 36 28 / 0.25);
+  border-radius: 8px;
+  color: #8f2018;
+  font-size: 13px;
+}
+
+.auth__form .button {
+  justify-content: center;
+  margin-top: 12px;
+}
+
+/* ───────────── Panel de compartir ───────────── */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgb(15 23 38 / 0.35);
+  backdrop-filter: blur(2px);
+  -webkit-backdrop-filter: blur(2px);
+  animation: fade-in 140ms ease;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+}
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(460px, 100%);
+  max-height: calc(100vh - 32px);
+  padding: 18px;
+  overflow-y: auto;
+  background: var(--surface-solid);
+  border-radius: 16px;
+  box-shadow: 0 24px 60px -24px rgb(20 32 52 / 0.5);
+  animation: pop-in 180ms var(--ease-out);
+}
+
+.panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.panel__title {
+  margin: 0;
+  font-size: 19px;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+
+.panel__close {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition: background-color 150ms ease;
+}
+
+.panel__close:hover {
+  background: rgb(20 29 43 / 0.07);
+}
+
+.panel__copy {
+  justify-content: center;
+}
+
+.panel__state {
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.panel__state strong {
+  color: var(--ink);
+}
+
+.panel__group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.panel__legend {
+  margin: 0;
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.panel__option {
+  display: flex;
+  align-items: start;
+  gap: 10px;
+  cursor: pointer;
+}
+
+.panel__option input {
+  margin-top: 3px;
+  accent-color: var(--accent);
+}
+
+.panel__option-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel__option-hint {
+  display: block;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.panel__members {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.panel__member {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.panel__member-name {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.panel__member-email {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 12px;
+  font-weight: 400;
+  text-overflow: ellipsis;
+}
+
+.panel__member-role {
+  margin-left: auto;
+  color: var(--ink-soft);
+  font-size: 13px;
+  white-space: nowrap;
+}
+
+.panel__member-remove {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ink-soft);
+  cursor: pointer;
+  transition:
+    background-color 150ms ease,
+    color 150ms ease;
+}
+
+.panel__member-remove:hover:not(:disabled) {
+  background: rgb(179 38 30 / 0.1);
+  color: #a3241c;
+}
+
+.panel__invite {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.panel__label {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.panel__invite-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.panel__input,
+.panel__select {
+  height: 36px;
+  padding: 0 10px;
+  border: 1px solid rgb(20 29 43 / 0.2);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  font: inherit;
+  font-size: 14px;
+}
+
+.panel__input {
+  flex: 1 1 180px;
+  min-width: 0;
+}
+
+.panel__empty,
+.panel__hint {
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.panel__error {
+  padding: 8px 10px;
+  background: #fdeeee;
+  border: 1px solid rgb(163 36 28 / 0.25);
+  border-radius: 8px;
+  color: #8f2018;
+  font-size: 13px;
+}
+
+/* ───────────── Caso de estudio ───────────── */
+
+.case {
+  position: fixed;
+  inset: 0;
+  overflow-y: auto;
+  padding: clamp(40px, 8vh, 88px) 16px 64px;
+  background-color: var(--bg);
+  background-image: radial-gradient(circle, var(--bg-dot) 1.3px, transparent 1.8px);
+  background-size: 24px 24px;
+  background-position: 12px 12px;
+  scroll-behavior: smooth;
+}
+
+.case > * {
+  width: min(680px, 100%);
+  margin-inline: auto;
+}
+
+.case__hero {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 18px;
+  text-align: center;
+}
+
+.case__title {
+  margin: 0;
+  font-size: clamp(28px, 5vw, 42px);
+  font-weight: 600;
+  line-height: 1.1;
+  letter-spacing: -0.028em;
+  text-wrap: balance;
+}
+
+.case__lead {
+  max-width: 560px;
+  color: var(--ink-soft);
+  font-size: 17px;
+  line-height: 1.55;
+  text-wrap: pretty;
+}
+
+/* Las cifras, en papelitos. */
+.case__numbers {
+  /* El color de cada papel lo pone su clase note--*; este es el de reserva. */
+  --paper: var(--paper-yellow);
+
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 14px;
+  margin: 48px auto;
+  padding: 0;
+  list-style: none;
+}
+
+.case__number {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 148px;
+  padding: 14px 14px 16px;
+  background:
+    radial-gradient(circle at 100% 100%, rgb(60 40 0 / 0.07), transparent 30px),
+    linear-gradient(172deg, color-mix(in oklab, var(--paper), white 30%) 0%, var(--paper) 26%,
+      color-mix(in oklab, var(--paper), #5c4300 6%) 100%);
+  border-radius: 2px 2px 5px 3px;
+  box-shadow: var(--shadow-rest);
+  color: var(--paper-ink);
+  text-align: left;
+}
+
+.case__number-value {
+  font-family: var(--font-note);
+  font-size: 34px;
+  line-height: 1;
+}
+
+.case__number-label {
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.case__section {
+  margin-top: 52px;
+}
+
+.case__heading {
+  margin: 0 0 14px;
+  font-size: clamp(21px, 3vw, 26px);
+  font-weight: 600;
+  letter-spacing: -0.02em;
+}
+
+.case__text {
+  margin-bottom: 12px;
+  font-size: 16px;
+  line-height: 1.62;
+  text-wrap: pretty;
+}
+
+.case__grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case__card {
+  padding: 16px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 13px;
+  box-shadow: var(--shadow-float);
+}
+
+.case__card-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.case__card-text {
+  color: var(--ink-soft);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.case__list {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin: 18px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.case__item {
+  padding: 16px 18px;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--accent);
+  border-radius: 4px 13px 13px 4px;
+  box-shadow: var(--shadow-float);
+}
+
+/* Lo que se rompió: la franja en ámbar, como el aviso de sin conexión. */
+.case__item--bug {
+  border-left-color: var(--connecting);
+}
+
+.case__item-title {
+  margin: 0 0 6px;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.case__cost {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.case__cost strong {
+  color: var(--ink);
+}
+
+.case__figure {
+  margin: 22px 0 0;
+}
+
+.case__figure img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  box-shadow: var(--shadow-float);
+  background: var(--bg);
+}
+
+/* La ilustración de arriba, más ancha que el texto. */
+.case__figure--hero {
+  width: min(880px, 100%);
+  margin: 36px auto 0;
+}
+
+.case__figure figcaption {
+  margin-top: 8px;
+  color: var(--ink-soft);
+  font-size: 13px;
+  line-height: 1.5;
+  text-align: center;
+  text-wrap: pretty;
+}
+
+.case__foot {
+  margin-top: 56px;
+  padding-top: 28px;
+  border-top: 1px solid var(--line);
+  text-align: center;
+}
+
+.case__foot .home__actions {
+  justify-content: center;
+  margin-top: 18px;
+}
+
+/* ───────────── Responsive y táctil ───────────── */
+
+/* Las notas decorativas de la portada no caben junto al texto. */
+@media (max-width: 860px) {
+  .home__decor {
+    display: none;
+  }
+}
+
+@media (max-width: 520px) {
+  .brand__name,
+  .button__label {
+    display: none;
+  }
+
+  .toolbar .button {
+    padding: 0 10px;
+  }
+
+  .home__bar {
+    right: 12px;
+  }
+
+  /* El estado queda solo como punto de color (el texto sigue en `title` y para lectores). */
+  .status {
+    padding: 0 10px;
+  }
+
+  .status__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+}
+
+/* Sin hover (pantallas táctiles): acciones siempre visibles y objetivos más grandes. */
+@media (hover: none) {
+  .note__actions {
+    opacity: 1;
+  }
+
+  .note__bar {
+    height: 40px;
+  }
+
+  .note__handle,
+  .note__action {
+    width: 36px;
+    height: 36px;
+  }
+
+  .note__palette {
+    top: 44px;
+  }
+
+  .swatch {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+/* ───────────── Movimiento reducido ───────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .case {
+    scroll-behavior: auto;
+  }
+
+  .note,
+  .note.is-dragging,
+  .note__actions,
+  .note__action,
+  .swatch,
+  .button,
+  .brand,
+  .recent__link,
+  .recent__arrow,
+  .recent__forget,
+  .avatar--self,
+  .auth__tab,
+  .account__action,
+  .panel__close,
+  .panel__member-remove,
+  .cursor {
+    transition: none;
+  }
+
+  .note,
+  .note__palette,
+  .name-editor,
+  .toast {
+    animation: none;
+  }
+
+  .note.is-dragging {
+    scale: 1;
+  }
+
+  .status__dot {
+    animation: none !important;
+  }
+}
