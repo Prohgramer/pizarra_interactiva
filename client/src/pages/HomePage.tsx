@@ -97,9 +97,9 @@ export function HomePage() {
             quién entra y los tienes todos juntos.
           </p>
         )}
-        <p className="home__note">
+        {/* <p className="home__note">
           <Link to={CASE_PATH}>Cómo está hecha</Link>: el caso de estudio, con las decisiones y lo que se rompió.
-        </p>
+        </p> */}
       </section>
 
       {rooms !== null && rooms.length > 0 && (
